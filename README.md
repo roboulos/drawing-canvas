@@ -1,66 +1,44 @@
-# Drawing Canvas Uploader WeWeb Component
+---
+name: drawing-canvas-uploader
+description: A canvas-based drawing component with image upload capabilities, allowing users to draw over uploaded images and save the result
+keywords: [drawing, canvas, image upload, fabric.js, paint, sketch]
+---
 
-A WeWeb component that provides a drawing canvas with touch support and image export capabilities.
+#### Drawing Canvas with Image Upload
 
-## Features
+Properties:
+- `canvasWidth`: `string` - Width of the canvas. Default: `'100%'`
+- `canvasHeight`: `string` - Height of the canvas. Default: `'400px'`
+- `defaultBrushColor`: `string` - Initial brush color. Default: `'#000000'`
+- `defaultBrushSize`: `number` - Initial brush size (1-50). Default: `5`
 
-- Responsive drawing canvas
-- Touch and mouse support
+Events:
+- `save`: Triggered when drawing is saved
+  - payload: `{ value: string }` - Base64 PNG data
+- `imageUploaded`: Triggered when image is uploaded
+  - payload: `{ success: boolean }`
+- `error`: Triggered on error
+  - payload: `{ error: string }`
+
+Special features:
+- Drag and drop image upload
+- Draw over uploaded images
 - Adjustable brush size and color
-- Background color customization
-- PNG/JPEG export
-- Undo functionality
-- Clear canvas option
+- Clear drawing while keeping background
+- Clear everything and start over
+- Export as PNG in base64 format
 
-## Properties
+To use with Xano:
+1. Add the component to your page
+2. Create a workflow triggered by the "On Save Drawing" event
+3. Use WWAxios to POST the base64 image data to your Xano endpoint
+4. Handle the response in your workflow
 
-- `brushSize`: Number - Size of the drawing brush
-- `brushColor`: Color - Color of the brush
-- `canvasHeight`: Length - Height of the canvas
-- `backgroundColor`: Color - Background color of the canvas
-- `saveFormat`: Select - Image save format (PNG/JPEG)
-
-## Events
-
-- `onDraw`: Triggered during drawing operations
-- `onChange`: Triggered when canvas content changes
-- `onSave`: Triggered when drawing is saved
-
-## Actions
-
-- `clear()`: Clears the canvas
-- `save()`: Saves the current drawing
-- `undo()`: Removes the last drawing action
-
-## Installation
-
-1. Install dependencies:
-```bash
-npm install
+Example Xano workflow:
+```javascript
+// In your WeWeb workflow
+const drawingData = trigger.event.value; // Base64 PNG
+const response = await wwAxios.post('YOUR_XANO_ENDPOINT', {
+  image: drawingData
+});
 ```
-
-2. Start development server:
-```bash
-npm run serve
-```
-
-3. Build for production:
-```bash
-npm run build
-```
-
-## Usage
-
-1. Add the component to your WeWeb project
-2. Configure the properties in the WeWeb editor
-3. Use the component's events and actions to integrate with your application
-
-## Development
-
-This component follows WeWeb's component guidelines and best practices:
-- Uses Vue 3 Composition API
-- Implements proper touch/mouse event handling
-- Handles window resize for canvas scaling
-- Includes proper cleanup on component unmount
-- Provides comprehensive error handling
-- Supports different pixel ratios
