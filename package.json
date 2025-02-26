@@ -6,15 +6,12 @@
     "serve": "weweb serve"
   },
   "devDependencies": {
+    "@weweb/cli": "^3.8.13",
     "webpack-dev-server": "^4.15.1"
   },
   "weweb": {
     "name": "drawing-canvas",
     "componentPath": "./src/wwElement.vue",
     "type": "element"
-  },
-  "dependencies": {
-    "@weweb/cli": "^3.8.13",
-    "fabric": "^6.6.1"
   }
 }
