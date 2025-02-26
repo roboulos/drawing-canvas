@@ -1,54 +1,112 @@
 export default {
+    name: 'drawing-canvas',
     editor: {
-        label: 'Drawing Canvas Uploader',
-        icon: 'edit',
+      label: {
+        en: 'Drawing Canvas',
+      },
+      icon: 'pencil',
     },
     properties: {
-        brushSize: {
-            label: 'Brush size',
-            type: 'Number',
-            defaultValue: 5,
-            bindable: true,
+      canvasWidth: {
+        label: { en: 'Canvas Width' },
+        type: 'Length',
+        options: {
+          unitChoices: [
+            { value: 'px', label: 'px', min: 100, max: 2000 },
+            { value: '%', label: '%', min: 10, max: 100 }
+          ]
         },
-        brushColor: {
-            label: 'Brush color',
-            type: 'Color',
-            defaultValue: '#000000',
-            bindable: true,
+        defaultValue: '100%',
+        bindable: true,
+        section: 'settings',
+        /* wwEditor:start */
+        bindingValidation: {
+          type: 'string',
+          tooltip: 'A valid CSS length value (px or %)',
         },
-        canvasHeight: {
-            label: 'Canvas height',
-            type: 'Length',
-            defaultValue: '400px',
-            bindable: true,
+        propertyHelp: {
+          tooltip: 'Set the width of the drawing canvas',
         },
-        backgroundColor: {
-            label: 'Background color',
-            type: 'Color',
-            defaultValue: '#FFFFFF',
-            bindable: true,
+        /* wwEditor:end */
+      },
+      canvasHeight: {
+        label: { en: 'Canvas Height' },
+        type: 'Length',
+        options: {
+          unitChoices: [
+            { value: 'px', label: 'px', min: 100, max: 2000 },
+            { value: '%', label: '%', min: 10, max: 100 }
+          ]
         },
-        saveFormat: {
-            label: 'Save format',
-            type: 'TextSelect',
-            options: {
-                options: [
-                    { label: 'PNG', value: 'png' },
-                    { label: 'JPEG', value: 'jpeg' },
-                ],
-            },
-            defaultValue: 'png',
-            bindable: true,
-        }
+        defaultValue: '400px',
+        bindable: true,
+        section: 'settings',
+        /* wwEditor:start */
+        bindingValidation: {
+          type: 'string',
+          tooltip: 'A valid CSS length value (px or %)',
+        },
+        propertyHelp: {
+          tooltip: 'Set the height of the drawing canvas',
+        },
+        /* wwEditor:end */
+      },
+      defaultBrushColor: {
+        label: { en: 'Default Brush Color' },
+        type: 'Color',
+        defaultValue: '#000000',
+        bindable: true,
+        section: 'settings',
+        /* wwEditor:start */
+        bindingValidation: {
+          type: 'string',
+          tooltip: 'A valid color value',
+        },
+        propertyHelp: {
+          tooltip: 'Set the default color for the drawing brush',
+        },
+        /* wwEditor:end */
+      },
+      defaultBrushSize: {
+        label: { en: 'Default Brush Size' },
+        type: 'Number',
+        defaultValue: 5,
+        bindable: true,
+        section: 'settings',
+        options: {
+          min: 1,
+          max: 50,
+          step: 1
+        },
+        /* wwEditor:start */
+        bindingValidation: {
+          type: 'number',
+          tooltip: 'A number between 1 and 50',
+        },
+        propertyHelp: {
+          tooltip: 'Set the default size of the drawing brush',
+        },
+        /* wwEditor:end */
+      }
     },
     triggerEvents: [
-        { name: 'onDraw', label: 'On Draw', event: { data: {} } },
-        { name: 'onChange', label: 'On Change', event: { data: {} } },
-        { name: 'onSave', label: 'On Save', event: { data: {} } }
-    ],
-    actions: [
-        { name: 'clear', label: 'Clear canvas' },
-        { name: 'save', label: 'Save drawing' },
-        { name: 'undo', label: 'Undo last action' }
+      {
+        name: 'save',
+        label: { en: 'On Save Drawing' },
+        event: { value: '' },
+        description: 'Triggered when the drawing is saved. Returns base64 PNG data.'
+      },
+      {
+        name: 'imageUploaded',
+        label: { en: 'On Image Upload' },
+        event: { success: true },
+        description: 'Triggered when an image is successfully uploaded to the canvas'
+      },
+      {
+        name: 'error',
+        label: { en: 'On Error' },
+        event: { error: '' },
+        description: 'Triggered when an error occurs'
+      }
     ]
-};
+  };

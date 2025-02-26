@@ -1,15 +1,20 @@
 {
-  "name": "drawing-canvas-uploader",
+  "name": "@roboulos/drawing-canvas",
   "version": "1.0.0",
   "scripts": {
     "build": "weweb build",
     "serve": "weweb serve"
   },
   "devDependencies": {
-    "@weweb/cli": "latest",
     "webpack-dev-server": "^4.15.1"
   },
   "weweb": {
-    "componentPath": "./src/wwElement.vue"
+    "name": "drawing-canvas",
+    "componentPath": "./src/wwElement.vue",
+    "type": "element"
+  },
+  "dependencies": {
+    "@weweb/cli": "^3.8.13",
+    "fabric": "^6.6.1"
   }
 }
