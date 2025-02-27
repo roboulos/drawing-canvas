@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "weweb build",
-    "serve": "weweb serve"
+    "serve": "weweb serve --port 8081"
   },
   "devDependencies": {
     "@weweb/cli": "^3.8.13",

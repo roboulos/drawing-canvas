@@ -1,4 +1,7 @@
-<template>
+// This is a wrapper for our component for local testing purposes
+
+// Import the template content as a string
+const template = `
   <div class="krea-container" ref="containerRef">
     <!-- Main Canvas -->
     <canvas ref="canvasRef" class="krea-canvas"></canvas>
@@ -76,339 +79,10 @@
       </div>
     </div>
   </div>
-</template>
+`;
 
-<script>
-export default {
-  name: 'DrawingCanvas',
-  props: {
-    content: { type: Object, required: true },
-    uid: { type: String, required: true }
-  },
-
-  emits: ['trigger-event'],
-  
-  data() {
-    return {
-      isDrawing: false,
-      isDrawingMode: true,
-      ctx: null,
-      hasImage: false,
-      lastX: 0,
-      lastY: 0,
-      brushColor: this.content?.defaultBrushColor || '#000000',
-      brushSize: this.content?.defaultBrushSize || 5,
-      originalImage: null,
-      imageData: null,
-      resourcesLoaded: false
-    };
-  },
-  
-  mounted() {
-    // Initialize once component is mounted
-    this.initCanvas();
-    
-    // Add resize handler
-    window.addEventListener('resize', this.handleResize);
-    
-    // Track pointer events for drawing
-    this.$refs.canvasRef.addEventListener('pointerdown', this.startDrawing);
-    this.$refs.canvasRef.addEventListener('pointermove', this.draw);
-    this.$refs.canvasRef.addEventListener('pointerup', this.stopDrawing);
-    this.$refs.canvasRef.addEventListener('pointerleave', this.stopDrawing);
-    
-    // Support drag and drop
-    const container = this.$refs.containerRef;
-    container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      container.classList.add('dragging');
-    });
-    
-    container.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      container.classList.remove('dragging');
-    });
-    
-    container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      container.classList.remove('dragging');
-      
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.match('image.*')) {
-        this.loadImage(file);
-      }
-    });
-  },
-  
-  beforeUnmount() {
-    // Clean up event listeners
-    window.removeEventListener('resize', this.handleResize);
-    
-    this.$refs.canvasRef.removeEventListener('pointerdown', this.startDrawing);
-    this.$refs.canvasRef.removeEventListener('pointermove', this.draw);
-    this.$refs.canvasRef.removeEventListener('pointerup', this.stopDrawing);
-    this.$refs.canvasRef.removeEventListener('pointerleave', this.stopDrawing);
-  },
-  
-  watch: {
-    brushColor() {
-      if (this.ctx) {
-        this.ctx.strokeStyle = this.brushColor;
-      }
-    },
-    
-    brushSize() {
-      if (this.ctx) {
-        this.ctx.lineWidth = this.brushSize;
-      }
-    },
-    
-    'content.defaultBrushColor': function(newVal) {
-      if (newVal) this.brushColor = newVal;
-    },
-    
-    'content.defaultBrushSize': function(newVal) {
-      if (newVal) this.brushSize = parseInt(newVal);
-    }
-  },
-  
-  methods: {
-    initCanvas() {
-      try {
-        const canvas = this.$refs.canvasRef;
-        const container = this.$refs.containerRef;
-        
-        // Set canvas dimensions
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-        
-        // Get drawing context and set default properties
-        this.ctx = canvas.getContext('2d');
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.strokeStyle = this.brushColor;
-        this.ctx.lineWidth = this.brushSize;
-      } catch (error) {
-        console.error('Failed to initialize canvas:', error);
-        this.emitError('Failed to initialize canvas');
-      }
-    },
-    
-    handleResize() {
-      try {
-        // Store current canvas content
-        const canvas = this.$refs.canvasRef;
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        tempCtx.drawImage(canvas, 0, 0);
-        
-        // Resize canvas
-        const container = this.$refs.containerRef;
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-        
-        // Restore context settings
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.strokeStyle = this.brushColor;
-        this.ctx.lineWidth = this.brushSize;
-        
-        // Restore original image if exists
-        if (this.hasImage && this.originalImage) {
-          this.drawImageOnCanvas(this.originalImage);
-        } else {
-          // Restore drawn content
-          this.ctx.drawImage(tempCanvas, 0, 0);
-        }
-      } catch (error) {
-        console.error('Failed to resize canvas:', error);
-        this.emitError('Failed to resize canvas');
-      }
-    },
-    
-    triggerFileInput() {
-      this.$refs.fileInput.click();
-    },
-    
-    handleFileSelect(event) {
-      try {
-        const file = event.target.files[0];
-        if (file) {
-          this.loadImage(file);
-        }
-        // Reset file input
-        event.target.value = null;
-      } catch (error) {
-        console.error('Failed to select file:', error);
-        this.emitError('Failed to select file');
-      }
-    },
-    
-    loadImage(file) {
-      try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            this.originalImage = img;
-            this.drawImageOnCanvas(img);
-            this.hasImage = true;
-            
-            // Emit success event
-            this.$emit('trigger-event', {
-              name: 'imageUploaded',
-              event: { success: true }
-            });
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      } catch (error) {
-        console.error('Failed to load image:', error);
-        this.emitError('Failed to load image');
-      }
-    },
-    
-    drawImageOnCanvas(img) {
-      try {
-        const canvas = this.$refs.canvasRef;
-        const ctx = this.ctx;
-        
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Calculate scaling to fit
-        const scale = Math.min(
-          canvas.width / img.width,
-          canvas.height / img.height
-        ) * 0.9; // Scale down slightly to leave margins
-        
-        const width = img.width * scale;
-        const height = img.height * scale;
-        const x = (canvas.width - width) / 2;
-        const y = (canvas.height - height) / 2;
-        
-        // Draw image centered
-        ctx.drawImage(img, x, y, width, height);
-        
-        // Store the current state for clearing drawings
-        this.imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      } catch (error) {
-        console.error('Failed to draw image:', error);
-        this.emitError('Failed to draw image');
-      }
-    },
-    
-    enableDrawing() {
-      this.isDrawingMode = true;
-      this.$refs.canvasRef.style.cursor = 'crosshair';
-    },
-    
-    startDrawing(event) {
-      if (!this.hasImage || !this.isDrawingMode) return;
-      
-      try {
-        this.isDrawing = true;
-        
-        const canvas = this.$refs.canvasRef;
-        const rect = canvas.getBoundingClientRect();
-        
-        // Get position relative to canvas
-        this.lastX = event.clientX - rect.left;
-        this.lastY = event.clientY - rect.top;
-      } catch (error) {
-        console.error('Failed to start drawing:', error);
-        this.emitError('Failed to start drawing');
-      }
-    },
-    
-    draw(event) {
-      if (!this.isDrawing || !this.isDrawingMode) return;
-      
-      try {
-        const canvas = this.$refs.canvasRef;
-        const rect = canvas.getBoundingClientRect();
-        
-        // Get current position
-        const currentX = event.clientX - rect.left;
-        const currentY = event.clientY - rect.top;
-        
-        // Draw line
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.lastX, this.lastY);
-        this.ctx.lineTo(currentX, currentY);
-        this.ctx.stroke();
-        
-        // Update last position
-        this.lastX = currentX;
-        this.lastY = currentY;
-      } catch (error) {
-        console.error('Failed while drawing:', error);
-        this.emitError('Failed while drawing');
-      }
-    },
-    
-    stopDrawing() {
-      this.isDrawing = false;
-    },
-    
-    clearDrawing() {
-      try {
-        if (!this.hasImage || !this.imageData) return;
-        
-        // Restore the original image state
-        this.ctx.putImageData(this.imageData, 0, 0);
-      } catch (error) {
-        console.error('Failed to clear drawing:', error);
-        this.emitError('Failed to clear drawing');
-      }
-    },
-    
-    clearImage() {
-      try {
-        const canvas = this.$refs.canvasRef;
-        
-        // Clear the entire canvas
-        this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Reset state
-        this.hasImage = false;
-        this.originalImage = null;
-        this.imageData = null;
-      } catch (error) {
-        console.error('Failed to clear image:', error);
-        this.emitError('Failed to clear image');
-      }
-    },
-    
-    saveDrawing() {
-      try {
-        const canvas = this.$refs.canvasRef;
-        const dataUrl = canvas.toDataURL('image/png');
-        
-        this.$emit('trigger-event', {
-          name: 'save',
-          event: { value: dataUrl }
-        });
-      } catch (error) {
-        console.error('Failed to save drawing:', error);
-        this.emitError('Failed to save drawing');
-      }
-    },
-    
-    emitError(message) {
-      this.$emit('trigger-event', {
-        name: 'error',
-        event: { error: message }
-      });
-    }
-  }
-};
-</script>
-
-<style>
+// Import the styles
+const styles = `
 .krea-container {
   position: relative;
   width: 100%;
@@ -585,4 +259,329 @@ export default {
 .save-btn:hover {
   background-color: #1976d2;
 }
-</style>
+`;
+
+// Export the component
+export default {
+  name: 'DrawingCanvas',
+  template,
+  props: {
+    content: { type: Object, required: true },
+    uid: { type: String, default: 'test-uid' }
+  },
+  
+  data() {
+    return {
+      isDrawing: false,
+      isDrawingMode: true,
+      ctx: null,
+      hasImage: false,
+      lastX: 0,
+      lastY: 0,
+      brushColor: this.content?.defaultBrushColor || '#000000',
+      brushSize: this.content?.defaultBrushSize || 5,
+      originalImage: null,
+      imageData: null
+    };
+  },
+  
+  mounted() {
+    this.initCanvas();
+    window.addEventListener('resize', this.handleResize);
+    
+    // Track pointer events for drawing
+    this.$refs.canvasRef.addEventListener('pointerdown', this.startDrawing);
+    this.$refs.canvasRef.addEventListener('pointermove', this.draw);
+    this.$refs.canvasRef.addEventListener('pointerup', this.stopDrawing);
+    this.$refs.canvasRef.addEventListener('pointerleave', this.stopDrawing);
+    
+    // Support drag and drop
+    const container = this.$refs.containerRef;
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      container.classList.add('dragging');
+    });
+    
+    container.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      container.classList.remove('dragging');
+    });
+    
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      container.classList.remove('dragging');
+      
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.match('image.*')) {
+        this.loadImage(file);
+      }
+    });
+  },
+  
+  beforeUnmount() {
+    window.removeEventListener('resize', this.handleResize);
+    
+    // Clean up event listeners
+    this.$refs.canvasRef.removeEventListener('pointerdown', this.startDrawing);
+    this.$refs.canvasRef.removeEventListener('pointermove', this.draw);
+    this.$refs.canvasRef.removeEventListener('pointerup', this.stopDrawing);
+    this.$refs.canvasRef.removeEventListener('pointerleave', this.stopDrawing);
+  },
+  
+  watch: {
+    brushColor() {
+      if (this.ctx) {
+        this.ctx.strokeStyle = this.brushColor;
+      }
+    },
+    
+    brushSize() {
+      if (this.ctx) {
+        this.ctx.lineWidth = this.brushSize;
+      }
+    },
+    
+    'content.defaultBrushColor': function(newVal) {
+      if (newVal) this.brushColor = newVal;
+    },
+    
+    'content.defaultBrushSize': function(newVal) {
+      if (newVal) this.brushSize = parseInt(newVal);
+    }
+  },
+  
+  methods: {
+    initCanvas() {
+      try {
+        const canvas = this.$refs.canvasRef;
+        const container = this.$refs.containerRef;
+        
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        
+        this.ctx = canvas.getContext('2d');
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.ctx.strokeStyle = this.brushColor;
+        this.ctx.lineWidth = this.brushSize;
+      } catch (error) {
+        console.error('Failed to initialize canvas:', error);
+        this.emitError('Failed to initialize canvas');
+      }
+    },
+    
+    handleResize() {
+      try {
+        // Store current canvas content
+        const canvas = this.$refs.canvasRef;
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        tempCtx.drawImage(canvas, 0, 0);
+        
+        // Resize canvas
+        const container = this.$refs.containerRef;
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        
+        // Restore context settings
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.ctx.strokeStyle = this.brushColor;
+        this.ctx.lineWidth = this.brushSize;
+        
+        // Restore original image if exists
+        if (this.hasImage && this.originalImage) {
+          this.drawImageOnCanvas(this.originalImage);
+        } else {
+          // Restore drawn content
+          this.ctx.drawImage(tempCanvas, 0, 0);
+        }
+      } catch (error) {
+        console.error('Failed to resize canvas:', error);
+        this.emitError('Failed to resize canvas');
+      }
+    },
+    
+    triggerFileInput() {
+      this.$refs.fileInput.click();
+    },
+    
+    handleFileSelect(event) {
+      try {
+        const file = event.target.files[0];
+        if (file) {
+          this.loadImage(file);
+        }
+      } catch (error) {
+        console.error('Failed to select file:', error);
+        this.emitError('Failed to select file');
+      }
+    },
+    
+    loadImage(file) {
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            this.originalImage = img;
+            this.drawImageOnCanvas(img);
+            this.hasImage = true;
+            
+            // Emit success event
+            this.$emit('trigger-event', {
+              name: 'imageUploaded',
+              event: { success: true }
+            });
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Failed to load image:', error);
+        this.emitError('Failed to load image');
+      }
+    },
+    
+    drawImageOnCanvas(img) {
+      try {
+        const canvas = this.$refs.canvasRef;
+        const ctx = this.ctx;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate scaling to fit
+        const scale = Math.min(
+          canvas.width / img.width,
+          canvas.height / img.height
+        ) * 0.9; // Scale down slightly to leave margins
+        
+        const width = img.width * scale;
+        const height = img.height * scale;
+        const x = (canvas.width - width) / 2;
+        const y = (canvas.height - height) / 2;
+        
+        // Draw image centered
+        ctx.drawImage(img, x, y, width, height);
+        
+        // Store the current state for clearing drawings
+        this.imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      } catch (error) {
+        console.error('Failed to draw image:', error);
+        this.emitError('Failed to draw image');
+      }
+    },
+    
+    enableDrawing() {
+      this.isDrawingMode = true;
+      this.$refs.canvasRef.style.cursor = 'crosshair';
+    },
+    
+    startDrawing(event) {
+      if (!this.hasImage || !this.isDrawingMode) return;
+      
+      try {
+        this.isDrawing = true;
+        
+        const canvas = this.$refs.canvasRef;
+        const rect = canvas.getBoundingClientRect();
+        
+        // Get position relative to canvas
+        this.lastX = event.clientX - rect.left;
+        this.lastY = event.clientY - rect.top;
+      } catch (error) {
+        console.error('Failed to start drawing:', error);
+        this.emitError('Failed to start drawing');
+      }
+    },
+    
+    draw(event) {
+      if (!this.isDrawing || !this.isDrawingMode) return;
+      
+      try {
+        const canvas = this.$refs.canvasRef;
+        const rect = canvas.getBoundingClientRect();
+        
+        // Get current position
+        const currentX = event.clientX - rect.left;
+        const currentY = event.clientY - rect.top;
+        
+        // Draw line
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.lastX, this.lastY);
+        this.ctx.lineTo(currentX, currentY);
+        this.ctx.stroke();
+        
+        // Update last position
+        this.lastX = currentX;
+        this.lastY = currentY;
+      } catch (error) {
+        console.error('Failed while drawing:', error);
+        this.emitError('Failed while drawing');
+      }
+    },
+    
+    stopDrawing() {
+      this.isDrawing = false;
+    },
+    
+    clearDrawing() {
+      try {
+        if (!this.hasImage || !this.imageData) return;
+        
+        // Restore the original image state
+        this.ctx.putImageData(this.imageData, 0, 0);
+      } catch (error) {
+        console.error('Failed to clear drawing:', error);
+        this.emitError('Failed to clear drawing');
+      }
+    },
+    
+    clearImage() {
+      try {
+        const canvas = this.$refs.canvasRef;
+        
+        // Clear the entire canvas
+        this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Reset state
+        this.hasImage = false;
+        this.originalImage = null;
+        this.imageData = null;
+      } catch (error) {
+        console.error('Failed to clear image:', error);
+        this.emitError('Failed to clear image');
+      }
+    },
+    
+    saveDrawing() {
+      try {
+        const canvas = this.$refs.canvasRef;
+        const dataUrl = canvas.toDataURL('image/png');
+        
+        this.$emit('trigger-event', {
+          name: 'save',
+          event: { value: dataUrl }
+        });
+      } catch (error) {
+        console.error('Failed to save drawing:', error);
+        this.emitError('Failed to save drawing');
+      }
+    },
+    
+    emitError(message) {
+      this.$emit('trigger-event', {
+        name: 'error',
+        event: { error: message }
+      });
+    }
+  }
+};
+
+// Add the styles to the document
+const styleElement = document.createElement('style');
+styleElement.textContent = styles;
+document.head.appendChild(styleElement);
